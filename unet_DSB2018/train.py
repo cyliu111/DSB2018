@@ -38,7 +38,7 @@ def train_net(net,
     train_transform = et.ExtCompose([
     # et.ExtRandomCrop(size=(256, 256)),
     et.ExtResize(size=(256, 256)),
-    # et.add_noise_to_lbl(num_classes=opts.num_classes, scale=5, keep_prop=0.9),
+    et.add_noise_to_lbl(num_classes=2, scale=3, keep_prop=0.9),
     et.ExtToTensor(normalize=False)
 ])
     val_transform = et.ExtCompose([
@@ -48,10 +48,11 @@ def train_net(net,
     et.ExtToTensor(normalize=False)
 ])
     dataset_train = DSB2018Dataset(image_dir, mask_dir, train=True, transform=train_transform)
+    dataset_val = DSB2018Dataset(image_dir, mask_dir, train=True, transform=val_transform)
     n_val = int(len(dataset_train) * val_percent)
     n_train = len(dataset_train) - n_val
-    train_set, val_set = random_split(dataset_train, [n_train, n_val], generator=torch.Generator().manual_seed(0))
-    val_set.transform = val_transform
+    train_set, _ = random_split(dataset_train, [n_train, n_val], generator=torch.Generator().manual_seed(0))
+    _, val_set = random_split(dataset_train, [n_train, n_val], generator=torch.Generator().manual_seed(0))
 
     # 3. Create data loaders
     loader_args = dict(batch_size=batch_size, num_workers=1, pin_memory=True)
@@ -129,7 +130,7 @@ def train_net(net,
                 pbar.set_postfix(**{'loss (batch)': loss.item()})
 
                 # Evaluation round
-                if epoch % 50 == 0:
+                if epoch % 10 == 0:
                     division_step = (n_train // (1 * batch_size))
                     if global_step % division_step == 0:
                         val_score = evaluate(net, val_loader, device, False)
@@ -155,7 +156,7 @@ def train_net(net,
             masks_pred, dice_score = predict(net, batch, device, False)
             masks_pred_ave, dice_score_ave = predict(net, batch, device, True)
 
-            if dice_score < 0.9:
+            if dice_score < 0.96:
               thresh = 0.1
               experiment.log({'bad_dice': dice_score,
                       'bad_dice_ave': dice_score_ave,
@@ -163,21 +164,19 @@ def train_net(net,
                       'bad_true': wandb.Image(true_masks[0].float().cpu()),
                       'bad_pred': wandb.Image(torch.softmax(masks_pred, dim=1).argmax(dim=1)[0].float().cpu()),
                       'bad_pred_ave': wandb.Image(torch.softmax(masks_pred_ave, dim=1).argmax(dim=1)[0].float().cpu()),
-                      'background': wandb.Image((masks_pred[0,0,:,:]>thresh).float().cpu()),
-                      'part1': wandb.Image((masks_pred[0,1,:,:]>thresh).float().cpu()),
                       }
                       )                               
         
-        if epoch%10 == 0:
-          if save_checkpoint:
-              Path(dir_checkpoint).mkdir(parents=True, exist_ok=True)
-              torch.save(net.state_dict(), str(dir_checkpoint / 'checkpoint_epoch{}.pth'.format(epoch)))
-              logging.info(f'Checkpoint {epoch} saved!')
+        # if epoch%10 == 0:
+        #   if save_checkpoint:
+        #       Path(dir_checkpoint).mkdir(parents=True, exist_ok=True)
+        #       torch.save(net.state_dict(), str(dir_checkpoint / 'checkpoint_epoch{}.pth'.format(epoch)))
+        #       logging.info(f'Checkpoint {epoch} saved!')
 
 
 def get_args():
     parser = argparse.ArgumentParser(description='Train the UNet on images and target masks')
-    parser.add_argument('--epochs', '-e', metavar='E', type=int, default=20, help='Number of epochs')
+    parser.add_argument('--epochs', '-e', metavar='E', type=int, default=50, help='Number of epochs')
     parser.add_argument('--batch-size', '-b', dest='batch_size', metavar='B', type=int, default=16, help='Batch size')
     parser.add_argument('--learning-rate', '-l', metavar='LR', type=float, default=1e-5,
                         help='Learning rate', dest='lr')
