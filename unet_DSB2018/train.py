@@ -52,7 +52,7 @@ def train_net(net,
     n_val = int(len(dataset_train) * val_percent)
     n_train = len(dataset_train) - n_val
     train_set, _ = random_split(dataset_train, [n_train, n_val], generator=torch.Generator().manual_seed(0))
-    _, val_set = random_split(dataset_train, [n_train, n_val], generator=torch.Generator().manual_seed(0))
+    _, val_set = random_split(dataset_val, [n_train, n_val], generator=torch.Generator().manual_seed(0))
 
     # 3. Create data loaders
     loader_args = dict(batch_size=batch_size, num_workers=1, pin_memory=True)
