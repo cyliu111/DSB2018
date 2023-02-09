@@ -5,7 +5,6 @@ from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, utils
 from PIL import Image
 import matplotlib.pylab as plt
-from sklearn.model_selection import train_test_split
 
 class DSB2018Dataset(Dataset):
     def __init__(self, image_dir, mask_dir, train=True, transform=None):
@@ -22,15 +21,15 @@ class DSB2018Dataset(Dataset):
         if self.train:
             img_dir = os.path.join(self.image_dir, self.img_id[idx], 'image.png')
             mask_dir = os.path.join(self.mask_dir, self.img_id[idx], 'mask.png')
-            img = Image.open(img_dir).convert('RGB')
-            mask = Image.open(mask_dir, as_gray=True).astype(np.bool)
+            image = Image.open(img_dir).convert('RGB')
+            mask = Image.open(mask_dir)
         else:
             img_dir = os.path.join(self.root_dir, self.img_id[idx], 'image.png')
-            img = Image.open(img_dir).convert('RGB')
-            return {'image':img}
+            image = Image.open(img_dir).convert('RGB')
+            return {'image': image}
             # size = (img.shape[0],img.shape[1])  # (Height, Weidth)
 
         if self.transform:
-            image, target = self.transform(image, target)
+            image, mask = self.transform(image, mask)
 
-        return {'image':img, 'mask':target}
+        return {'image':image, 'mask':mask[:,:,0]/255}
