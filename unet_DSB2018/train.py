@@ -20,10 +20,10 @@ from evaluate import evaluate
 from predict import predict
 from unet_diff.model import AVEUNet
 
-image_dir = '/content/UNet-pytorch/data/combined'
-mask_dir = '/content/UNet-pytorch/data/combined'
-test_dir = '/content/UNet-pytorch/data/testing_data'
-results_dir = '/content/UNet-pytorch/data/results'
+image_dir = '/content/DSB2018/data/combined'
+mask_dir = '/content/DSB2018/data/combined'
+test_dir = '/content/DSB2018/data/testing_data'
+results_dir = '/content/DSB2018/data/results'
 
 def train_net(net,
               device,
