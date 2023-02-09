@@ -37,21 +37,20 @@ def train_net(net,
     # 1. Create dataset
     train_transform = et.ExtCompose([
     # et.ExtRandomCrop(size=(256, 256)),
-    et.ExtResize(256),
+    et.ExtResize(size=(256, 256)),
     # et.add_noise_to_lbl(num_classes=opts.num_classes, scale=5, keep_prop=0.9),
-    et.ExtToTensor(),
+    et.ExtToTensor(normalize=False)
 ])
     val_transform = et.ExtCompose([
     # et.ExtRandomCrop(size=(256, 256)),
-    et.ExtResize(256),
+    et.ExtResize(size=(256, 256)),
     # et.add_noise_to_lbl(num_classes=opts.num_classes, scale=5, keep_prop=0.9),
-    et.ExtToTensor(),
+    et.ExtToTensor(normalize=False)
 ])
-    dataset_train = DSB2018Dataset(image_dir, mask_dir, train=True)
+    dataset_train = DSB2018Dataset(image_dir, mask_dir, train=True, transform=train_transform)
     n_val = int(len(dataset_train) * val_percent)
     n_train = len(dataset_train) - n_val
     train_set, val_set = random_split(dataset_train, [n_train, n_val], generator=torch.Generator().manual_seed(0))
-    train_set.transform = train_transform
     val_set.transform = val_transform
 
     # 3. Create data loaders
