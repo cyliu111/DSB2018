@@ -5,17 +5,14 @@ from tqdm import tqdm
 from utils.dice_score import multiclass_dice_coeff, dice_coeff
 
 def evaluate(net, val_loader, device, required_average=False):
-    num_val_batches = len(val_loader)
     net.eval()
-    predictions = []
-    img_ids = []
+    num_val_batches = len(val_loader)
+    dice_score = 0
     for batch in val_loader:
         image, mask_true = batch['image'], batch['mask']
         image = image.to(device=device, dtype=torch.float32)
         mask_true = mask_true.to(device=device, dtype=torch.long)
-        # output = (output > 0.5)
-        output = output.data.cpu().numpy()
-        output = output.transpose((0, 2, 3, 1))    # transpose to (B,H,W,C)
+        mask_true = F.one_hot(mask_true, net.n_classes).permute(0, 3, 1, 2).float()
         with torch.no_grad():
             # predict the mask
             mask_pred = net(image, required_average)
