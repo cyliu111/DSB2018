@@ -5,7 +5,7 @@ from tqdm import tqdm
 from PIL import Image
 
 # read all training data and save them to other folder
-def prepare_training_data(stage1_train_src, ):
+def prepare_training_data(stage1_train_src, stage1_train_dest):
     # get imageId
     train_ids = next(os.walk(stage1_train_src))[1]
 
@@ -19,6 +19,8 @@ def prepare_training_data(stage1_train_src, ):
         dest = os.path.join(stage1_train_dest, id_)
         img = Image.open(os.path.join(path, 'images', id_ + '.png')).convert("RGB")
         mask = assemble_masks(path)
+        if not os.path.exists(dest):
+            os.mkdir(dest)        
         img.save(os.path.join(dest, 'image.png'))
         Image.fromarray(mask).save(os.path.join(dest, 'mask.png'))
 
