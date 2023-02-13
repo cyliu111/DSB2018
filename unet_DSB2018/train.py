@@ -130,7 +130,7 @@ def train_net(net,
                 pbar.set_postfix(**{'train loss (batch)': loss.item()})
 
                 # Evaluation round
-                if epoch % 10 == 0:
+                if epoch % 1 == 0:
                     division_step = (n_train // (1 * batch_size))
                     if global_step % division_step == 0:
                         val_score = evaluate(net, val_loader, device, False)
@@ -140,10 +140,10 @@ def train_net(net,
                            'learning rate': optimizer.param_groups[0]['lr'],
                            'validation Dice': val_score,
                            'images': wandb.Image(images[0].cpu()),
-                           'masks': {
-                               'true': wandb.Image(true_masks[0].float().cpu()),
-                               'pred': wandb.Image(torch.softmax(masks_pred, dim=1).argmax(dim=1)[0].float().cpu()),
-                           },
+#                            'masks': {
+#                                'true': wandb.Image(true_masks[0].float().cpu()),
+#                                'pred': wandb.Image(torch.softmax(masks_pred, dim=1).argmax(dim=1)[0].float().cpu()),
+#                            },
                            'step': global_step,
                            'epoch': epoch,
                            # **histograms
