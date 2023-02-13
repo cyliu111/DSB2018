@@ -158,14 +158,15 @@ def train_net(net,
 
             if dice_score < 0.96:
               thresh = 0.1
-              experiment.log({'bad_dice': dice_score,
-                      'bad_dice_ave': dice_score_ave,
-                      'bad prediction': wandb.Image(images[0].cpu()),
-                      'bad_true': wandb.Image(true_masks[0].float().cpu()),
-                      'bad_pred': wandb.Image(torch.softmax(masks_pred, dim=1).argmax(dim=1)[0].float().cpu()),
-                      'bad_pred_ave': wandb.Image(torch.softmax(masks_pred_ave, dim=1).argmax(dim=1)[0].float().cpu()),
-                      }
-                      )                               
+              for i in range(10):
+                experiment.log({'bad_dice': dice_score,
+                        'bad_dice_ave': dice_score_ave,
+                        'bad prediction': wandb.Image(images[i].cpu()),
+                        'bad_true': wandb.Image(true_masks[i].float().cpu()),
+                        'bad_pred': wandb.Image(torch.softmax(masks_pred, dim=1).argmax(dim=1)[i].float().cpu()),
+                        'bad_pred_ave': wandb.Image(torch.softmax(masks_pred_ave, dim=1).argmax(dim=1)[i].float().cpu()),
+                        }
+                        ) 
         
         # if epoch%10 == 0:
         #   if save_checkpoint:
