@@ -77,8 +77,8 @@ class AVEUNet(nn.Module):
         x = self.outc(x)
         # x = -self.logsoftmax(x)
         if required_average:
-          for i in range(10): # 5 for enlarge 10 for noise
-            x = x - 0.2*self.average(x)  
+          for i in range(30): # 5 for enlarge 10 for noise
+            x = x - 0.1*self.average(x)  
             # x[:,2:,:,:] = x[:,2:,:,:] + 0.05*self.average(x[:,2:,:,:], nonezero_map=1-(x.argmax(dim=1,keepdim=True)==2).float())                       
         return x   
 
