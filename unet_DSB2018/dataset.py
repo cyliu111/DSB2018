@@ -22,7 +22,7 @@ class DSB2018Dataset(Dataset):
             img_dir = os.path.join(self.image_dir, self.img_id[idx], 'image.png')
             mask_dir = os.path.join(self.mask_dir, self.img_id[idx], 'mask.png')
             image = Image.open(img_dir).convert('RGB')
-            mask = Image.open(mask_dir)
+            mask = Image.open(mask_dir).convert('L')
         else:
             img_dir = os.path.join(self.root_dir, self.img_id[idx], 'image.png')
             image = Image.open(img_dir).convert('RGB')
@@ -32,4 +32,4 @@ class DSB2018Dataset(Dataset):
         if self.transform:
             image, mask = self.transform(image, mask)
 
-        return {'image':image, 'mask':mask[:,:,0]/255}
+        return {'image':image, 'mask':mask/255}
