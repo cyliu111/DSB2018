@@ -127,7 +127,7 @@ def train_net(net,
                    'step': global_step,
                    'epoch': epoch
                 })
-                pbar.set_postfix(**{'loss (batch)': loss.item()})
+                pbar.set_postfix(**{'train loss (batch)': loss.item()})
 
                 # Evaluation round
                 if epoch % 10 == 0:
