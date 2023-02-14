@@ -1,5 +1,6 @@
 import argparse
 import logging
+import random
 from pathlib import Path
 
 import torch
@@ -34,7 +35,12 @@ def train_net(net,
               save_checkpoint: bool = True,
               img_scale: float = 1.0,
               amp: bool = False):
-    # 1. Create dataset
+    # 1. Setup random seed
+    torch.manual_seed(opts.random_seed)
+    np.random.seed(opts.random_seed)
+    random.seed(opts.random_seed)
+    
+    # 2. Create dataset
     train_transform = et.ExtCompose([
     # et.ExtRandomCrop(size=(256, 256)),
     et.ExtResize(size=(256, 256)),
