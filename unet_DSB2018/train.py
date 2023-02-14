@@ -157,7 +157,6 @@ def train_net(net,
             masks_pred_ave, dice_score_ave = predict(net, batch, device, True)
 
             if dice_score < 0.96:
-              thresh = 0.1
               for i in range(10):
                 experiment.log({'bad_dice': dice_score,
                         'bad_dice_ave': dice_score_ave,
