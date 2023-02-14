@@ -36,9 +36,9 @@ def train_net(net,
               img_scale: float = 1.0,
               amp: bool = False):
     # 1. Setup random seed
-    torch.manual_seed(opts.random_seed)
-    np.random.seed(opts.random_seed)
-    random.seed(opts.random_seed)
+    torch.manual_seed(0)
+    np.random.seed(0)
+    random.seed(0)
     
     # 2. Create dataset
     train_transform = et.ExtCompose([
