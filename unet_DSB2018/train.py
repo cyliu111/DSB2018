@@ -140,6 +140,7 @@ def train_net(net,
                     division_step = (n_train // (1 * batch_size))
                     if global_step % division_step == 0:
                         val_score = evaluate(net, val_loader, device, False)
+                        scheduler.step(val_score)
 
                         logging.info('Validation Dice score: {}'.format(val_score))
                         experiment.log({
