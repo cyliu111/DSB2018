@@ -25,6 +25,7 @@ image_dir = '/content/DSB2018/data/combined'
 mask_dir = '/content/DSB2018/data/combined'
 test_dir = '/content/DSB2018/data/testing_data'
 results_dir = '/content/DSB2018/data/results'
+dir_checkpoint = Path('/content/gdrive/MyDrive/Data/DSB2018/checkpoints/')
 
 def train_net(net,
               device,
