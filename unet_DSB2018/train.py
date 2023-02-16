@@ -84,7 +84,7 @@ def train_net(net,
 
     # 4. Set up the optimizer, the loss, the learning rate scheduler and the loss scaling for AMP
     optimizer = optim.RMSprop(net.parameters(), lr=learning_rate, weight_decay=1e-8, momentum=0.9)
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=2)  # goal: maximize Dice score
+#     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=2)  # goal: maximize Dice score
     grad_scaler = torch.cuda.amp.GradScaler(enabled=amp)
     criterion = nn.CrossEntropyLoss()
     # criterion = nn.NLLLoss()
@@ -141,7 +141,7 @@ def train_net(net,
                     division_step = (n_train // (1 * batch_size))
                     if global_step % division_step == 0:
                         val_score = evaluate(net, val_loader, device, False)
-                        scheduler.step(val_score)
+#                         scheduler.step(val_score)
 
                         logging.info('Validation Dice score: {}'.format(val_score))
                         experiment.log({
