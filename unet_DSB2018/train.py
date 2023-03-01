@@ -83,7 +83,6 @@ def train_net(net,
         Learning rate:   {learning_rate}
         Checkpoints:     {save_checkpoint}
         Device:          {device.type}
-        Images scaling:  {img_scale}
         Mixed Precision: {amp}
     ''')
 
@@ -131,7 +130,7 @@ def train_net(net,
                 pbar.set_postfix(**{'train loss (batch)': loss.item()})
 
                 # Evaluation round
-                if epoch % 10 == 0:
+                if epoch % 2 == 0:
                     division_step = (n_train // (1 * batch_size))
                     if global_step % division_step == 0:
                         val_score = evaluate(net, val_loader, device, False)
