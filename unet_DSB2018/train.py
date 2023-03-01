@@ -188,7 +188,7 @@ def get_args():
     parser.add_argument('--add_noise', action='store_true', default=False, help='Add noise to labels')
     parser.add_argument('--use_iels', action='store_true', default=False, help='Use IELs for training')
     parser.add_argument('--iels_dt', '-dt', type=float, default=0.1, help='dt for IELs')
-    parser.add_argument('--iels_num', '-num', type=int, default=20, help='Number of IELs')
+    parser.add_argument('--iels_num', '-num', type=int, default=30, help='Number of IELs')
     
     return parser.parse_args()
 
