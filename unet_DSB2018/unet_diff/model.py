@@ -32,7 +32,6 @@ class UNet_with_IELs(nn.Module):
         self.up3 = Up(256, 128 // factor, bilinear)
         self.up4 = Up(128, 64, bilinear)
         self.outc = OutConv(64, n_classes)
-        self.logsoftmax = nn.LogSoftmax(dim=1)
         self.Laplacian_kernel = get_laplacian_kernel(n_classes)
         self.iels_dt = iels_dt
         self.iels_num = iels_num
@@ -43,7 +42,7 @@ class UNet_with_IELs(nn.Module):
         return x
 
 
-    def forward(self, x, required_average):
+    def forward(self, x, required_iels):
         x1 = self.inc(x)
         x2 = self.down1(x1)
         x3 = self.down2(x2)
