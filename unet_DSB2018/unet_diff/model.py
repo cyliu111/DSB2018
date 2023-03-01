@@ -6,12 +6,6 @@ import torch.nn.functional as F
 import cv2
 import copy
 
-def get_gaussian_kernel(size=5): # 获取高斯kerner 并转为tensor ，size 可以改变模糊程度
-    kernel = cv2.getGaussianKernel(size, 0).dot(cv2.getGaussianKernel(size, 0).T)
-    kernel = torch.FloatTensor(kernel).unsqueeze(0).unsqueeze(0)
-    kernel = torch.nn.Parameter(data=kernel, requires_grad=False)
-    return kernel
-
 def get_laplacian_kernel(n_classes):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     kernel = torch.zeros(3,3, device = device)
@@ -20,16 +14,12 @@ def get_laplacian_kernel(n_classes):
     kernel = kernel.unsqueeze(0).unsqueeze(0)
     return  kernel.repeat(n_classes, 1, 1, 1)   
 
-def clones(module, N):
-  return nn.ModuleList([copy.deepcopy(module) for _ in range(N)])
-
-class AVEUNet(nn.Module):
-    def __init__(self, n_channels, n_classes, bilinear=False):
-        super(AVEUNet, self).__init__()
+class UNet_with_IELs(nn.Module):
+    def __init__(self, n_channels, n_classes, bilinear=False, iels_dt=0.1, iels_num=30):
+        super(UNet_with_IELs, self).__init__()
         self.n_channels = n_channels
         self.n_classes = n_classes
         self.bilinear = bilinear
-        # self.kernel = get_gaussian_kernel(size=5)
       
         self.inc = DoubleConv(n_channels, 64)
         self.down1 = Down(64, 128)
@@ -44,25 +34,14 @@ class AVEUNet(nn.Module):
         self.outc = OutConv(64, n_classes)
         self.logsoftmax = nn.LogSoftmax(dim=1)
         self.Laplacian_kernel = get_laplacian_kernel(n_classes)
-        # self.average = nn.AvgPool2d(kernel_size=9, stride=1, padding=4)
+        self.iels_dt = iels_dt
+        self.iels_num = iels_num
+        
+    def iels(self, x):
+        for i in range(self.iels_num):
+            x = x - self.iels_dt * (F.conv2d(x, self.Laplacian_kernel, padding=1, groups=self.n_classes))
+        return x
 
-    def average(self, x):
-      return F.conv2d(x, self.Laplacian_kernel, padding=1, groups=self.n_classes)
-
-    # def average(self, x):
-    #     epsilon = 1e-6
-    #     Dx = torch.diff(x, dim=2, append=x[0:,0:,0:1,0:])
-    #     Dy = torch.diff(x, dim=3, append=x[0:,0:,0:,0:1])
-    #     norm = torch.sqrt(torch.square(Dx) + torch.square(Dy) + epsilon)
-    #     Dx_normed = torch.div(Dx,norm)
-    #     Dy_normed = torch.div(Dy,norm)
-    #     return torch.diff(Dx_normed, dim=2, prepend=Dx_normed[0:,0:,-1:,0:]) + torch.diff(Dy_normed, dim=3, prepend=Dy_normed[0:,0:,0:,-1:])
-
-    # def average(self, x, nonezero_map):
-    #     b = nonezero_map.sum(dim=(2,3), keepdim=True)
-    #     a = (x*nonezero_map).sum(dim=(2,3), keepdim=True)
-    #     c = torch.div(a,b)
-    #     return x - c
 
     def forward(self, x, required_average):
         x1 = self.inc(x)
@@ -76,10 +55,8 @@ class AVEUNet(nn.Module):
         x = self.up4(x, x1)
         x = self.outc(x)
         # x = -self.logsoftmax(x)
-        if required_average:
-          for i in range(30): # 5 for enlarge 10 for noise
-            x = x - 0.1*self.average(x)  
-            # x[:,2:,:,:] = x[:,2:,:,:] + 0.05*self.average(x[:,2:,:,:], nonezero_map=1-(x.argmax(dim=1,keepdim=True)==2).float())                       
+        if required_iels:
+            x = self.iels(x)                      
         return x   
 
 
