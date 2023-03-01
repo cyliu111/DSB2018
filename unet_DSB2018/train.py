@@ -23,7 +23,7 @@ from unet_diff.model import UNet_with_IELs
 image_dir = '/content/DSB2018/data/combined'
 mask_dir = '/content/DSB2018/data/combined'
 test_dir = '/content/DSB2018/data/testing_data'
-results_dir = '/content/DSB2018/data/results'
+dir_predictions = '/content/DSB2018/data/predictions'
 dir_checkpoint = '/content/gdrive/MyDrive/Data/DSB2018/checkpoints/'
 
 def train_net(net,
@@ -148,21 +148,36 @@ def train_net(net,
                            'epoch': epoch,
                         })
         
-        if epoch == epochs:
-          for batch in val_loader: 
-            images = batch['image']
-            true_masks = batch['mask']
-            masks_pred, dice_score = predict(net, batch, device, False)
+#         if epoch == epochs:
+#             for batch in val_loader: 
+#                 images = batch['image']
+#                 true_masks = batch['mask']
+#                 masks_pred, dice_score = predict(net, batch, device, False)
 
-            if dice_score < 0.96:
-              for i in range(10):
-                experiment.log({'bad_dice': dice_score,
-                        'bad prediction': wandb.Image(images[i].cpu()),
-                        'bad_true': wandb.Image(true_masks[i].float().cpu()),
-                        'bad_pred': wandb.Image(torch.softmax(masks_pred, dim=1).argmax(dim=1)[i].float().cpu())
-                        }
-                        ) 
-        
+            
+#             if dice_score < 0.96:
+#                 for i in range(10):
+#                     experiment.log({'bad_dice': dice_score,
+#                         'bad prediction': wandb.Image(images[i].cpu()),
+#                         'bad_true': wandb.Image(true_masks[i].float().cpu()),
+#                         'bad_pred': wandb.Image(torch.softmax(masks_pred, dim=1).argmax(dim=1)[i].float().cpu())
+#                         }
+#                         ) 
+          
+        if epoch == epochs:
+            Path(dir_predictions).mkdir(parents=True, exist_ok=True)
+            for i, batch in enumerate(val_loader):
+                images, true_masks = batch['image'], batch['mask']
+                masks_pred, dice_score = predict(net, batch, device, False)
+
+                image = np.array(images[0].cpu(), dtype=np.uint8).transpose(1,2,0)
+                mask = np.array(true_masks[0].cpu(), dtype=np.uint8)*255
+                pred = np.array(torch.softmax(masks_pred, dim=1).argmax(dim=1)[0].cpu(), dtype=np.uint8)*255
+
+                Image.fromarray(image).save(str(Path(dir_predictions)/'{}_image.png'.format(i)))
+                Image.fromarray(mask).save(str(Path(dir_predictions)/'{}_mask.png'.format(i)))
+                Image.fromarray(pred).save(str(Path(dir_predictions)/'{}_pred.png'.format(i)))
+  
         if epoch%50 == 0:
           if save_checkpoint:
               Path(dir_checkpoint).mkdir(parents=True, exist_ok=True)
