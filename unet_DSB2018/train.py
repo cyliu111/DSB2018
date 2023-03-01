@@ -23,7 +23,7 @@ from unet_diff.model import UNet_with_IELs
 image_dir = '/content/DSB2018/data/combined'
 mask_dir = '/content/DSB2018/data/combined'
 test_dir = '/content/DSB2018/data/testing_data'
-dir_predictions = '/content/DSB2018/data/predictions'
+dir_predictions = '/content/gdrive/MyDrive/Data/DSB2018/predictions'
 dir_checkpoint = '/content/gdrive/MyDrive/Data/DSB2018/checkpoints/'
 
 def train_net(net,
