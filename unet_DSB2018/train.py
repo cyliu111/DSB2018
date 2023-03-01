@@ -12,20 +12,19 @@ from torch.utils.data import DataLoader, random_split
 from tqdm import tqdm
 
 import numpy as np
-from scipy import ndimage
 
 from dataset import DSB2018Dataset
 from utils import ext_transforms as et
 from utils.dice_score import dice_loss
 from evaluate import evaluate
 from predict import predict
-from unet_diff.model import AVEUNet
+from unet_diff.model import UNet_with_IELs
 
 image_dir = '/content/DSB2018/data/combined'
 mask_dir = '/content/DSB2018/data/combined'
 test_dir = '/content/DSB2018/data/testing_data'
 results_dir = '/content/DSB2018/data/results'
-dir_checkpoint = Path('/content/gdrive/MyDrive/Data/DSB2018/checkpoints/')
+dir_checkpoint = '/content/gdrive/MyDrive/Data/DSB2018/checkpoints/'
 
 def train_net(net,
               device,
@@ -35,23 +34,29 @@ def train_net(net,
               val_percent: float = 0.1,
               save_checkpoint: bool = True,
               img_scale: float = 1.0,
-              amp: bool = False):
+              amp: bool = False,
+              add_noise: bool = False,
+              use_iels: bool = False):
     # 1. Setup random seed
     torch.manual_seed(0)
     np.random.seed(0)
     random.seed(0)
     
     # 2. Create dataset
-    train_transform = et.ExtCompose([
-    # et.ExtRandomCrop(size=(256, 256)),
-    et.ExtResize(size=(256, 256)),
-    et.add_noise_to_lbl(num_classes=2, scale=3, keep_prop=0.9),
-    et.ExtToTensor(normalize=False)
-])
+    if add_noise:
+      train_transform = et.ExtCompose([
+      et.ExtResize(size=(256, 256)),
+      et.add_noise_to_lbl(num_classes=2, scale=3, keep_prop=0.9),
+      et.ExtToTensor(normalize=False)
+  ])
+    else:
+      train_transform = et.ExtCompose([
+      et.ExtResize(size=(256, 256)),
+      et.ExtToTensor(normalize=False)
+  ])
+      
     val_transform = et.ExtCompose([
-    # et.ExtRandomCrop(size=(256, 256)),
     et.ExtResize(size=(256, 256)),
-    # et.add_noise_to_lbl(num_classes=opts.num_classes, scale=5, keep_prop=0.9),
     et.ExtToTensor(normalize=False)
 ])
     dataset_train = DSB2018Dataset(image_dir, mask_dir, train=True, transform=train_transform)
@@ -84,13 +89,9 @@ def train_net(net,
 
     # 4. Set up the optimizer, the loss, the learning rate scheduler and the loss scaling for AMP
     optimizer = optim.RMSprop(net.parameters(), lr=learning_rate, weight_decay=1e-8, momentum=0.9)
-#     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=2)  # goal: maximize Dice score
     grad_scaler = torch.cuda.amp.GradScaler(enabled=amp)
     criterion = nn.CrossEntropyLoss()
-    # criterion = nn.NLLLoss()
     global_step = 0
-
-    # wandb.watch(net, log="all")
 
     val_score_old = 100
     # 5. Begin training
@@ -100,10 +101,8 @@ def train_net(net,
         with tqdm(total=n_train, desc=f'Epoch {epoch}/{epochs}', unit='img') as pbar:
             for batch in train_loader:
                 images = batch['image'] 
-                # images = images + 50*torch.randn(images.shape)
 
                 true_masks = batch['mask']
-                # true_masks = batch['mask_noise']
 
                 assert images.shape[1] == net.n_channels, \
                     f'Network has been defined with {net.n_channels} input channels, ' \
@@ -114,12 +113,8 @@ def train_net(net,
                 true_masks = true_masks.to(device=device, dtype=torch.long)
 
                 with torch.cuda.amp.autocast(enabled=amp):
-                    masks_pred = net(images, False)
+                    masks_pred = net(images, use_iels)
                     loss = criterion(masks_pred, true_masks)
-                    # loss = criterion(masks_pred, true_masks) \
-                    #        + dice_loss(F.softmax(masks_pred, dim=1).float(),
-                    #                    F.one_hot(true_masks, net.n_classes).permute(0, 3, 1, 2).float(),
-                    #                    multiclass=True)
 
                 optimizer.zero_grad(set_to_none=True)
                 grad_scaler.scale(loss).backward()
@@ -137,11 +132,10 @@ def train_net(net,
                 pbar.set_postfix(**{'train loss (batch)': loss.item()})
 
                 # Evaluation round
-                if epoch % 1 == 0:
+                if epoch % 10 == 0:
                     division_step = (n_train // (1 * batch_size))
                     if global_step % division_step == 0:
                         val_score = evaluate(net, val_loader, device, False)
-#                         scheduler.step(val_score)
 
                         logging.info('Validation Dice score: {}'.format(val_score))
                         experiment.log({
@@ -154,7 +148,6 @@ def train_net(net,
 #                            },
                            'step': global_step,
                            'epoch': epoch,
-                           # **histograms
                         })
         
         if epoch == epochs:
@@ -162,24 +155,21 @@ def train_net(net,
             images = batch['image']
             true_masks = batch['mask']
             masks_pred, dice_score = predict(net, batch, device, False)
-            masks_pred_ave, dice_score_ave = predict(net, batch, device, True)
 
             if dice_score < 0.96:
               for i in range(10):
                 experiment.log({'bad_dice': dice_score,
-                        'bad_dice_ave': dice_score_ave,
                         'bad prediction': wandb.Image(images[i].cpu()),
                         'bad_true': wandb.Image(true_masks[i].float().cpu()),
-                        'bad_pred': wandb.Image(torch.softmax(masks_pred, dim=1).argmax(dim=1)[i].float().cpu()),
-                        'bad_pred_ave': wandb.Image(torch.softmax(masks_pred_ave, dim=1).argmax(dim=1)[i].float().cpu()),
+                        'bad_pred': wandb.Image(torch.softmax(masks_pred, dim=1).argmax(dim=1)[i].float().cpu())
                         }
                         ) 
         
-        # if epoch%10 == 0:
-        #   if save_checkpoint:
-        #       Path(dir_checkpoint).mkdir(parents=True, exist_ok=True)
-        #       torch.save(net.state_dict(), str(dir_checkpoint / 'checkpoint_epoch{}.pth'.format(epoch)))
-        #       logging.info(f'Checkpoint {epoch} saved!')
+        if epoch%50 == 0:
+          if save_checkpoint:
+              Path(dir_checkpoint).mkdir(parents=True, exist_ok=True)
+              torch.save(net.state_dict(), str(Paht(dir_checkpoint) / 'checkpoint_epoch{}.pth'.format(epoch)))
+              logging.info(f'Checkpoint {epoch} saved!')
 
 
 def get_args():
@@ -195,7 +185,11 @@ def get_args():
     parser.add_argument('--amp', action='store_true', default=False, help='Use mixed precision')
     parser.add_argument('--bilinear', action='store_true', default=False, help='Use bilinear upsampling')
     parser.add_argument('--classes', '-c', type=int, default=2, help='Number of classes')
-
+    parser.add_argument('--add_noise', action='store_true', default=False, help='Add noise to labels')
+    parser.add_argument('--use_iels', action='store_true', default=False, help='Use IELs for training')
+    parser.add_argument('--iels_dt', '-dt', type=float, default=0.1, help='dt for IELs')
+    parser.add_argument('--iels_num', '-num', type=int, default=20, help='Number of IELs')
+    
     return parser.parse_args()
 
 
@@ -209,13 +203,21 @@ if __name__ == '__main__':
     # Change here to adapt to your data
     # n_channels=3 for RGB images
     # n_classes is the number of probabilities you want to get per pixel
-    net = AVEUNet(n_channels=3, n_classes=args.classes, bilinear=args.bilinear)
+    net = UNet_with_IELs(n_channels=3, n_classes=args.classes, bilinear=args.bilinear, iels_dt=args.iels_dt,
+                         iels_num=args.iels_num)
 
     logging.info(f'Network:\n'
                  f'\t{net.n_channels} input channels\n'
                  f'\t{net.n_classes} output channels (classes)\n'
                  f'\t{"Bilinear" if net.bilinear else "Transposed conv"} upscaling')
-
+    
+    if args.use_iels:
+        logging.info(f'Use IELs for training:\n'
+                     f'\t iels_dt = {net.iels_dt} \n'
+                     f'\t iels_num = {net.iels_num}')
+    else:
+        logging.info(f'No IELs for training')
+        
     if args.load:
         net.load_state_dict(torch.load(args.load, map_location=device))
         logging.info(f'Model loaded from {args.load}')
@@ -229,7 +231,9 @@ if __name__ == '__main__':
                   device=device,
                   img_scale=args.scale,
                   val_percent=args.val / 100,
-                  amp=args.amp)
+                  amp=args.amp,
+                  add_noise=args.add_noise,
+                  use_iels=args.use_iels)
     except KeyboardInterrupt:
         torch.save(net.state_dict(), 'INTERRUPTED.pth')
         logging.info('Saved interrupt')
