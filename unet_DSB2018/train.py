@@ -93,7 +93,6 @@ def train_net(net,
     criterion = nn.CrossEntropyLoss()
     global_step = 0
 
-    val_score_old = 100
     # 5. Begin training
     for epoch in range(1, epochs+1):
         net.train()
