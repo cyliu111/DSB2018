@@ -33,7 +33,6 @@ def train_net(net,
               learning_rate: float = 1*1e-5,
               val_percent: float = 0.1,
               save_checkpoint: bool = True,
-              img_scale: float = 1.0,
               amp: bool = False,
               add_noise: bool = False,
               use_iels: bool = False):
@@ -48,17 +47,18 @@ def train_net(net,
       et.ExtResize(size=(256, 256)),
       et.add_noise_to_lbl(num_classes=2, scale=3, keep_prop=0.9),
       et.ExtToTensor(normalize=False)
-  ])
+      ])
     else:
       train_transform = et.ExtCompose([
       et.ExtResize(size=(256, 256)),
       et.ExtToTensor(normalize=False)
-  ])
+      ])
       
     val_transform = et.ExtCompose([
     et.ExtResize(size=(256, 256)),
     et.ExtToTensor(normalize=False)
-])
+    ])
+    
     dataset_train = DSB2018Dataset(image_dir, mask_dir, train=True, transform=train_transform)
     dataset_val = DSB2018Dataset(image_dir, mask_dir, train=True, transform=val_transform)
     n_val = int(len(dataset_train) * val_percent)
@@ -74,7 +74,7 @@ def train_net(net,
     # # (Initialize logging)
     experiment = wandb.init(project='DSB2018', resume='allow', entity="cyliu111")
     experiment.config.update(dict(epochs=epochs, batch_size=batch_size, learning_rate=learning_rate,
-                                 val_percent=val_percent, save_checkpoint=save_checkpoint, img_scale=img_scale,
+                                 val_percent=val_percent, save_checkpoint=save_checkpoint,
                                  amp=amp))
 
     logging.info(f'''Starting training:
@@ -228,7 +228,6 @@ if __name__ == '__main__':
                   batch_size=args.batch_size,
                   learning_rate=args.lr,
                   device=device,
-                  img_scale=args.scale,
                   val_percent=args.val / 100,
                   amp=args.amp,
                   add_noise=args.add_noise,
