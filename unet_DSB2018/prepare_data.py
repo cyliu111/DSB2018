@@ -5,7 +5,7 @@ from tqdm import tqdm
 from PIL import Image
 
 # read all training data and save them to other folder
-def prepare_training_data(stage1_train_src, stage1_train_dest):
+def prepare_training_data(stage1_train_src, stage1_train_dest):  
     # get imageId
     train_ids = next(os.walk(stage1_train_src))[1]
 
@@ -42,7 +42,7 @@ if __name__ == '__main__':
     """ Prepare training data
     read data and overlay masks and save to destination path
     """
-    stage1_train_src = '/content/DSB2018/data/stage1_train'
-    stage1_train_dest = '/content/DSB2018/data/combined'
+    stage1_train_src = './data/stage1_train'
+    stage1_train_dest = './data/combined'
     
     prepare_training_data(stage1_train_src, stage1_train_dest)
