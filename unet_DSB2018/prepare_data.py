@@ -20,7 +20,7 @@ def prepare_training_data(stage1_train_src, stage1_train_dest):
         img = Image.open(os.path.join(path, 'images', id_ + '.png')).convert("RGB")
         mask = assemble_masks(path)
         if not os.path.exists(dest):
-            os.mkdir(dest)        
+            os.makedirs(dest)        
         img.save(os.path.join(dest, 'image.png'))
         Image.fromarray(mask).save(os.path.join(dest, 'mask.png'))
 
